@@ -1,0 +1,29 @@
+/* src/Sidebar.css */
+
+body {
+    display: flex;
+}
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: #343a40;
+    color: white;
+    transition: all 0.3s;
+}
+
+#sidebar .list-group-item {
+    background: #343a40;
+    color: white;
+    border: none;
+}
+
+#sidebar .list-group-item:hover {
+    background: #495057;
+}
+
+#content {
+    width: 100%;
+    padding: 20px;
+    transition: all 0.3s;
+}
