@@ -1,33 +1,38 @@
-// src/components/QuoteForm.js
-import React, { useState, useEffect } from 'react';
-import { createQuote, getCustomers, getServices } from '../services/api';
+import React, { useState, useEffect, useContext } from "react";
+import { createQuote, getCustomers, getServices } from "../services/api";
+import { useNavigate, Link } from "react-router-dom";
+import AuthContext from "../context/AuthContext";
 
 const QuoteForm = () => {
     const [quote, setQuote] = useState({
-        customer: '',
-        service: '',
+        customer: "",
+        service: "",
         quantity: 0,
-        total_price: 0.00,
-        status: 'Pending',
+        total_price: 0.0,
+        status: "Pending",
     });
     const [customers, setCustomers] = useState([]);
     const [services, setServices] = useState([]);
-    const [message, setMessage] = useState('');
+    const [message, setMessage] = useState("");
+    const { authTokens } = useContext(AuthContext);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchCustomers = async () => {
-            const response = await getCustomers();
-            setCustomers(response.data);
+        const fetchCustomersAndServices = async () => {
+            try {
+                const [customersResponse, servicesResponse] = await Promise.all([
+                    getCustomers(),
+                    getServices(authTokens),
+                ]);
+                setCustomers(customersResponse.data);
+                setServices(servicesResponse.data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
         };
 
-        const fetchServices = async () => {
-            const response = await getServices();
-            setServices(response.data);
-        };
-
-        fetchCustomers();
-        fetchServices();
-    }, []);
+        fetchCustomersAndServices();
+    }, [authTokens]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -40,17 +45,24 @@ const QuoteForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await createQuote(quote);
-            setMessage('Quote created successfully!');
-        } catch (error) {
-            setMessage('Error creating quote: ' + error.message);
-            console.error('Quote creation error:', error);
+            const response = await createQuote(quote);
+            console.log("Quote created successfully:", response.data);
+            setMessage("Quote created successfully!");
+
+            // Redirect without refreshing quote list
+            navigate("/quotes"); 
+        } catch (err) {
+            setMessage("Error creating quote: " + err.message);
+            console.error("Quote creation error:", err);
         }
     };
 
     return (
         <div className="container">
             <h2>Create Quote</h2>
+            <Link to="/quotes" className="btn btn-secondary mb-3"> {/* Button moved here */}
+                Back to Quotes
+            </Link>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label>Customer</label>
@@ -61,7 +73,7 @@ const QuoteForm = () => {
                         onChange={handleChange}
                     >
                         <option value="">Select Customer</option>
-                        {customers.map(customer => (
+                        {customers.map((customer) => (
                             <option key={customer.id} value={customer.id}>
                                 {customer.name}
                             </option>
@@ -77,7 +89,7 @@ const QuoteForm = () => {
                         onChange={handleChange}
                     >
                         <option value="">Select Service</option>
-                        {services.map(service => (
+                        {services.map((service) => (
                             <option key={service.id} value={service.id}>
                                 {service.name}
                             </option>
@@ -105,7 +117,9 @@ const QuoteForm = () => {
                         onChange={handleChange}
                     />
                 </div>
-                <button type="submit" className="btn btn-primary">Create Quote</button>
+                <button type="submit" className="btn btn-primary">
+                    Create Quote
+                </button>
                 {message && <p>{message}</p>}
             </form>
         </div>

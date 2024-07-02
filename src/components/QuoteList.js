@@ -1,31 +1,26 @@
-
 import React, { useState, useEffect } from "react";
 import { getQuotes, deleteQuote } from "../services/api";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useNavigate, Link } from "react-router-dom";
 
 const QuoteList = () => {
     const [quotes, setQuotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-  
+    const [needsRefresh, setNeedsRefresh] = useState(false);
+
     useEffect(() => {
-      const fetchQuotes = async () => {
-        try {
-          const response = await axios.get('/api/quotes/'); // First request
-          const quotesUrl = response.data.quotes; // Get the quotes URL
-  
-          const quotesResponse = await axios.get(quotesUrl); // Second request
-          setQuotes(quotesResponse.data);
-          setIsLoading(false);
-        } catch (err) {
-          setError(err.message || 'Error fetching quotes');
-          setIsLoading(false);
-        }
-      };
-  
-      fetchQuotes();
-    }, []);
+        const fetchQuotes = async () => {
+            try {
+                const response = await getQuotes();
+                setQuotes(response.data);
+            } catch (err) {
+                setError(err.message || "Error fetching quotes");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchQuotes();
+    }, [needsRefresh]); // Include needsRefresh dependency
 
     const navigate = useNavigate();
 
@@ -33,27 +28,56 @@ const QuoteList = () => {
         if (window.confirm("Are you sure you want to delete this quote?")) {
             try {
                 await deleteQuote(id);
-                setQuotes(quotes.filter((q) => q.id !== id));
-                navigate("/quotes");
+                setNeedsRefresh(true);
             } catch (err) {
                 setError(err.message || "Error deleting quote");
             }
         }
     };
 
+    const handleQuoteCreated = () => {
+        setNeedsRefresh(true);
+    };
+
+    if (isLoading) {
+        return <div>Loading...</div>;
+    }
+
+    if (error) {
+        return <div>Error: {error}</div>;
+    }
+
     return (
         <div className="container">
             <h2>Quote List</h2>
+            <Link to="/create-quote" className="btn btn-primary mb-3">
+                Create Quote
+            </Link>
             <ul className="list-group">
-                {quotes.map(quote => (
-                    <li key={quote.id} className="list-group-item">
-                        {quote.customer.name} - {quote.service.name} - {quote.quantity} units - ${quote.total_price}
-                        <button onClick={() => handleDelete(quote.id)} className="btn btn-danger btn-sm float-right">Delete</button>
-                    </li>
-                ))}
+                {Array.isArray(quotes) && quotes.length > 0 ? (
+                    quotes.map((quote) => (
+                        <li key={quote.id} className="list-group-item">
+                            <div className="d-flex justify-content-between align-items-center">
+                                <div>
+                                    {quote.customer?.name} - {quote.service?.name} -{" "}
+                                    {quote.quantity} units - ${quote.total_price}
+                                </div>
+                                <button
+                                    onClick={() => handleDelete(quote.id)}
+                                    className="btn btn-danger btn-sm"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </li>
+                    ))
+                ) : (
+                    <p>No quotes found.</p>
+                )}
             </ul>
         </div>
     );
 };
 
 export default QuoteList;
+
